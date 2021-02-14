@@ -4,7 +4,7 @@ flask-restful
 flask-migrate
 flask-sqlalchemy
 flask-marshmallow
-flask-jwt-extended
+flask-jwt-extended==3.25.1
 marshmallow-sqlalchemy
 python-dotenv
 passlib
