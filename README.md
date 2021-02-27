@@ -46,7 +46,6 @@ Used packages :
 * [Running tests](#running-tests)
 * [WSGI Server](#installing-a-wsgi-server)
 * [Flask CLI](#using-flask-cli)
-* [Using Celery](#using-celery)
 * [Using Docker](#using-docker)
 * [Makefile](#makefile-usage)
 * [APISpec and swagger](#using-apispec-and-swagger)
@@ -107,8 +106,6 @@ FLASK_ENV=development
 FLASK_APP="myapp.app:create_app"
 SECRET_KEY=changeme
 DATABASE_URI="sqlite:////tmp/myapp.db"
-CELERY_BROKER_URL=amqp://guest:guest@localhost/  # only present when celery is enabled
-CELERY_RESULT_BACKEND_URL=amqp://guest:guest@localhost/  # only present when celery is enabled
 ```
 
 Avaible configuration keys:
@@ -116,8 +113,6 @@ Avaible configuration keys:
 * `FLASK_ENV`: flask configuration key, enables `DEBUG` if set to `development`
 * `SECREY_KEY`: your application secret key
 * `DATABASE_URI`: SQLAlchemy connection string
-* `CELERY_BROKER_URL`: URL to use for celery broker, only when you enabled celery
-* `CELERY_RESULT_BACKEND_URL`: URL to use for celery result backend (e.g: `redis://localhost`)
 
 ### Authentication
 
@@ -180,7 +175,7 @@ tox -e test
 If you want to run pytest manually without using tox you'll need to install some dependencies before
 
 ```
-pip install pytest pytest-runner pytest-flask pytest-factoryboy pytest-celery factory_boy
+pip install pytest pytest-runner pytest-flask pytest-factoryboy factory_boy
 ```
 
 Then you can invoke pytest
@@ -211,55 +206,6 @@ Running tox with pytest only:
 
 ```bash
 make tests
-```
-
-#### Testing Celery
-
-Testing celery require at least a rabbitMQ (or any other compatible broker) running. By default, when you use tox or the `.testenv` file, celery broker and result backend are configured as follow:
-
-```
-CELERY_BROKER_URL=amqp://guest:guest@localhost/
-CELERY_RESULT_BACKEND_URL=amqp://guest:guest@localhost/
-```
-
-Meaning that it will try to connect to a local rabbitMQ server using guest user. Don't forget to update those settings if your configuration doesn't match.
-
-If you can't / don't want to install a local rabbitMQ server or any other available celery broker, you have 2 options:
-
-1. Use docker
-
-You can use docker-compose to run tests, as it will spawn a rabbitMQ and a redis servera and set correct env variables for configuration. All tests commands are available inside the Makefile to simplify this process.
-
-2. Update the tests to use eager mode
-
-**NOTE** this is not recommanded by celery: https://docs.celeryproject.org/en/stable/userguide/testing.html
-
-Alternatively, if you don't have a local broker and can't use docker, you can update unit tests to run them using the `task_always_eager` celery setting. This will actually run all tasks locally by blocking until tasks return (see https://docs.celeryproject.org/en/stable/userguide/configuration.html#std:setting-task_always_eager for more details).
-
-Example of `test_celery.py` file that use `task_always_eager`
-
-```python
-import pytest
-
-from myapi.app import init_celery
-from myapi.tasks.example import dummy_task
-
-
-@pytest.fixture(scope="session")
-def celery_session_app(celery_session_app, app):
-    celery = init_celery(app)
-
-    celery_session_app.conf = celery.conf
-    celery_session_app.conf.task_always_eager = True
-    celery_session_app.Task = celery_session_app.Task
-
-    yield celery_session_app
-
-
-def test_example(celery_session_app):
-    """Simply test our dummy task using celery"""
-    res = dummy_task.delay()
-    assert res.get() == "OK"
 ```
 
 ### Installing a wsgi server
@@ -297,57 +243,13 @@ This cookiecutter is fully compatible with default flask CLI and use a `.flasken
 Note that we also set `FLASK_ENV` to `development` to enable debugger.
 
 
-### Using Celery
-
-This cookiecutter has an optional [Celery](http://www.celeryproject.org/) integration that let you choose if you want to use it or not in your project.
-If you choose to use Celery, additionnal code and files will be generated to get started with it.
-
-This code will include a dummy task located in `yourproject/yourapp/tasks/example.py` that only return `"OK"` and a `celery_app` file used to your celery workers.
-
-
-#### Running celery workers
-
-In your project path, once dependencies are installed, you can just run
-
-```
-celery -A myapi.celery_app:app worker --loglevel=info
-```
-
-If you have updated your configuration for broker / result backend your workers should start and you should see the example task avaible
-
-```
-[tasks]
-  . myapi.tasks.example.dummy_task
-```
-
-
-#### Running a task
-
-To run a task you can either import it and call it
-
-```python
->>> from myapi.tasks.example import dummy_task
->>> result = dummy_task.delay()
->>> result.get()
-'OK'
-```
-
-Or use the celery extension
-
-```python
->>> from myapi.extensions import celery
->>> celery.send_task('myapi.tasks.example.dummy_task').get()
-'OK'
-```
-
 ## Using docker
 
 **WARNING** both Dockerfile and `docker-compose.yml` are **NOT** suited for production, use them for development only or as a starting point.
 
-This template offer simple docker support to help you get started and it comes with both Dockerfile and a `docker-compose.yml`. Please note that docker-compose is mostly useful when using celery
-since it takes care of running rabbitmq, redis, your web API and celery workers at the same time, but it also work if you don't use celery at all.
+This template offer simple docker support to help you get started and it comes with both Dockerfile and a `docker-compose.yml`. 
 
-Dockerfile has intentionally no entrypoint to allow you to run any command from it (server, shell, init, celery, ...)
+Dockerfile has intentionally no entrypoint to allow you to run any command from it (server, shell, init, ...)
 
 Note that you still need to init your app on first start, even when using compose.
 
@@ -430,10 +332,7 @@ This come with a very simple extension that allow you to override basic settings
 
 ### 6/08/2020
 
-* Updated README for tests and celery
 * Added a `.testenv` file to avoid needing to set env variables when running pytest manually
-* Updated celery fixtures to use session fixtures (for worker and app)
-* Replaced `prefork` in `celery_worker_pool` by `solo` (#41)
 
 ### 18/01/2020
 
@@ -442,8 +341,6 @@ This come with a very simple extension that allow you to override basic settings
 * Added `lint` and `tests` envs to tox
 * Added black support
 * Improved travis tests
-* Updated Makefile to handle tests with celery
-* Updated tox to handle env variables for celery when runing tests
 * Added initial db migration instead of relying on `db.create_all()`
 * Added new step to create database in README
 * Various cleanup
@@ -464,8 +361,6 @@ This come with a very simple extension that allow you to override basic settings
 ### 24/04/2019
 
 * Update configuration to only use env variables, `.flaskenv` has been updated too
-* Add unit tests for celery
-* Add flake8 to tox
 * Configuration file cannot be overridden by `MYAPP CONFIG` env variable anymore
 * various cleanups (unused imports, removed `configtest.py` file, flake8 errors)
 
