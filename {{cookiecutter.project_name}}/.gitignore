@@ -90,3 +90,7 @@ ENV/
 
 # vscode
 .vscode/
+
+# cruft management
+cookiecutter-options.yml
+.cruft.json
