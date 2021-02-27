@@ -1,4 +1,4 @@
-.PHONY: init init-migration build run db-migrate test tox
+.PHONY: init init-migration build run db-migrate test pre-commit 
 
 init:  build run
 	docker-compose exec web flask db upgrade
@@ -18,24 +18,10 @@ db-upgrade:
 	docker-compose exec web flask db upgrade
 
 test:
-{%- if cookiecutter.use_celery == "yes"%}
-	docker-compose stop celery # stop celery to avoid conflicts with celery tests
-	docker-compose start rabbitmq redis # ensuring both redis and rabbitmq are started
-{%- endif %}
-	docker-compose run -v $(PWD)/tests:/code/tests:ro web tox -e test
-{%- if cookiecutter.use_celery == "yes"%}
-	docker-compose start celery
-{%- endif %}
+	docker-compose run -v $(PWD)/tests:/code/tests:ro black
 
-tox:
-{%- if cookiecutter.use_celery == "yes"%}
-	docker-compose stop celery # stop celery to avoid conflicts with celery tests
-	docker-compose start rabbitmq redis # ensuring both redis and rabbitmq are started
-{%- endif %}
-	docker-compose run -v $(PWD)/tests:/code/tests:ro web tox -e {{ cookiecutter.tox_python_env }}
-{%- if cookiecutter.use_celery == "yes"%}
-	docker-compose start celery
-{%- endif %}
+pre-commit:
+	docker-compose exec pre-commit
 
 lint:
-	docker-compose run web tox -e lint
+	docker-compose run black
