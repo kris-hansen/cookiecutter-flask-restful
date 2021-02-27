@@ -1,9 +1,21 @@
-## {{cookiecutter.project_name}}
+# {{cookiecutter.project_name}}
 
-### Overview
+## Overview
 
+## Updating from template
 
-### How to build and run
+To check the diff from the template(run from the project root):
 
+```bash
+cruft check
+```
 
-### To Do
+To update the project from the template:
+
+```bash
+cruft update
+```
+
+## How to build and run
+
+## To Do
