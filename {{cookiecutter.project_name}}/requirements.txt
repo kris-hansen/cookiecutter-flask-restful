@@ -10,10 +10,12 @@ python-dotenv
 passlib
 apispec[yaml]
 apispec-webframeworks
-tox
-{%- if cookiecutter.use_celery == "yes" %}
-celery[redis]>=5.0.0
-{%- endif %}
+pre-commit
+flake8
+black
+google-cloud-pubsub
+google-cloud-secret-manager
+google-cloud-tasks
 {%- if cookiecutter.wsgi_server == "uwsgi" %}
 uwsgi
 {%- endif %}
